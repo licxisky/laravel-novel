@@ -47,13 +47,22 @@ class GetNovel extends Command
         $skip = intval($this->argument('skip'));
 
         for ($i = $start; $i <= $stop; $i += $skip) {
-            $this->info("正在获取编号为 $i 的小说");
-            $response = $client->get($baseUrl. $i);
+            $t = 0;
+            $response = $client->get($baseUrl. $i, [
+                'progress' => function ($dt, $dn, $ut, $un) use ($i, &$t) {
+                    if ($dn >= $t) {
+                        $this->output->write("\r<info>正在获取编号为 $i 的小说：$dn/". ($dt == 0 ? '未知' : $dt) ."</info>");
+                        $t = $dn;
+                    }
+                }
+            ]);
 
             $path = 'novel/' . parse_url($baseUrl, PHP_URL_HOST)  .'/' . intval($i / 1000) . '/' . $i . '.html';
 
             if (!Storage::put($path, $response->getBody()->getContents())) {
-                $this->warn("编号为 $i 的小说保存失败，路径 $path");
+                $this->warn(PHP_EOL . "编号为 $i 的小说保存失败，路径 $path");
+            } else {
+                $this->info(PHP_EOL . '小说保存成功');
             }
         }
     }
